@@ -164,6 +164,7 @@ class KeyguardStatusViewManager implements OnClickListener {
         sLightFont = Typeface.createFromFile(SYSTEM_FONT_TIME_LIGHT);
     }
 
+
     private class TransientTextManager {
         private TextView mTextView;
         private class Data {

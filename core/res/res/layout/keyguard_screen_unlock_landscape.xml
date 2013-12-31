@@ -32,7 +32,9 @@
         android:layout_marginTop="@dimen/keyguard_lockscreen_status_line_clockfont_top_margin"
         android:layout_gravity="center_horizontal"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content" >
+        android:layout_height="wrap_content"
+        android:layout_columnSpan="3"
+        android:layout_gravity="right"> >
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -45,7 +47,7 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:ellipsize="none"
-                android:textSize="110sp"
+                android:textSize="75dp"
                 android:textStyle="bold"
                 android:textColor="@color/lockscreen_clock_foreground"
                 />
@@ -55,7 +57,7 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:ellipsize="none"
-                android:textSize="110sp"
+                android:textSize="75dp"
                 android:textColor="@color/lockscreen_clock_foreground"
                 />
 
@@ -64,7 +66,7 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:ellipsize="none"
-                android:textSize="110sp"
+                android:textSize="75dp"
                 android:textColor="@color/lockscreen_clock_foreground"
                 />
 
@@ -73,7 +75,7 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:ellipsize="none"
-                android:textSize="18sp"
+                android:textSize="16dp"
                 android:textStyle="bold"
                 android:textColor="@color/lockscreen_clock_foreground"
                 />

@@ -39,12 +39,7 @@ SECONDARY_FRAMEWORKS_SUBDIRS := \
         media/java/android/media/audiofx \
         media/mca/effect/java/android/media/effect \
         media/mca/effect/java/android/media/effect/effects \
-        voip/java/com/android/server/sip \
-        core/java/com/android/internal/widget/multiwaveview \
-        core/java/com/android/internal/util/weather \
-        core/java/com/android/internal/http/multipart
-
-
+        voip/java/com/android/server/sip
 
 include $(CLEAR_VARS)
 
@@ -235,8 +230,7 @@ LOCAL_SRC_FILES += \
 	telephony/java/com/android/internal/telephony/IExtendedNetworkService.aidl \
 	voip/java/android/net/sip/ISipSession.aidl \
 	voip/java/android/net/sip/ISipSessionListener.aidl \
-	voip/java/android/net/sip/ISipService.aidl \
-
+	voip/java/android/net/sip/ISipService.aidl
 #
 
 
@@ -565,7 +559,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES:=$(framework_docs_LOCAL_API_CHECK_SRC_FILES)
 LOCAL_INTERMEDIATE_SOURCES:=$(framework_docs_LOCAL_INTERMEDIATE_SOURCES)
-LOCAL_JAVA_LIBRARIES:=$(framework_docs_LOCAL_JAVA_LIBRARIES) framework
+LOCAL_JAVA_LIBRARIES:=$(framework_docs_LOCAL_JAVA_LIBRARIES)
 LOCAL_MODULE_CLASS:=$(framework_docs_LOCAL_MODULE_CLASS)
 LOCAL_DROIDDOC_SOURCE_PATH:=$(framework_docs_LOCAL_DROIDDOC_SOURCE_PATH)
 LOCAL_DROIDDOC_HTML_DIR:=$(framework_docs_LOCAL_DROIDDOC_HTML_DIR)

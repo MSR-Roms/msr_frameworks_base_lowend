@@ -45,7 +45,7 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:ellipsize="none"
-                android:textSize="@dimen/keyguard_lockscreen_clock_font_size"
+                android:textSize="75dp"
                 android:textStyle="bold"
                 android:textColor="@color/lockscreen_clock_foreground"
                 />
@@ -55,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:singleLine="true"
                 android:ellipsize="none"
-                android:textSize="@dimen/keyguard_lockscreen_clock_font_size"
+                android:textSize="75dp"
                 android:textColor="@color/lockscreen_clock_foreground"
                 />
 
@@ -80,6 +80,7 @@
 
         </LinearLayout>
     </com.android.internal.widget.DigitalClock>
+
 
     <LinearLayout
         android:id="@+id/date_line"

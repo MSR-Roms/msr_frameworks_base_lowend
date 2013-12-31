@@ -58,37 +58,16 @@ class BluetoothDeviceProperties {
                 }
                 if (name.equals("UUIDs") || name.equals("Nodes")) {
                     StringBuilder str = new StringBuilder();
-                    i++;
-                    if (i < properties.length) {
-                        len = Integer.valueOf(properties[i]);
-                        for (int j = 0; j < len; j++) {
-                            i++;
-                            if (i < properties.length) {
-                                str.append(properties[i]);
-                                str.append(",");
-                            } else {
-                                Log.e(TAG, "Error: Remote Device Property Value at index "
-                                    + i + " is missing");
-                                continue;
-                            }
-                        }
-                        if (len > 0) {
-                            newValue = str.toString();
-                        }
-                    } else {
-                        Log.e(TAG, "Error: Remote Device Property Value at index "
-                            + i + " is missing");
-                        continue;
+                    len = Integer.valueOf(properties[++i]);
+                    for (int j = 0; j < len; j++) {
+                        str.append(properties[++i]);
+                        str.append(",");
+                    }
+                    if (len > 0) {
+                        newValue = str.toString();
                     }
                 } else {
-                    i++;
-                    if (i < properties.length) {
-                        newValue = properties[i];
-                    } else {
-                        Log.e(TAG, "Error: Remote Device Property Value at index "
-                            + i + " is missing");
-                        continue;
-                    }
+                    newValue = properties[++i];
                 }
 
                 propertyValues.put(name, newValue);

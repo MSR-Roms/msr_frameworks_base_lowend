@@ -163,7 +163,7 @@ public class WaveView extends View implements ValueAnimator.AnimatorUpdateListen
     }
 
     private void initDrawables() {
-        mUnlockRing = new DrawableHolder(createDrawable(R.drawable.unlock_ring));
+        mUnlockRing = new DrawableHolder(createDrawable(R.drawable.waveview_unlock_ring));
         mUnlockRing.setX(mLockCenterX);
         mUnlockRing.setY(mLockCenterY);
         mUnlockRing.setScaleX(0.1f);
@@ -171,7 +171,7 @@ public class WaveView extends View implements ValueAnimator.AnimatorUpdateListen
         mUnlockRing.setAlpha(0.0f);
         mDrawables.add(mUnlockRing);
 
-        mUnlockDefault = new DrawableHolder(createDrawable(R.drawable.unlock_default));
+        mUnlockDefault = new DrawableHolder(createDrawable(R.drawable.waveview_unlock_default));
         mUnlockDefault.setX(mLockCenterX);
         mUnlockDefault.setY(mLockCenterY);
         mUnlockDefault.setScaleX(0.1f);
@@ -179,7 +179,7 @@ public class WaveView extends View implements ValueAnimator.AnimatorUpdateListen
         mUnlockDefault.setAlpha(0.0f);
         mDrawables.add(mUnlockDefault);
 
-        mUnlockHalo = new DrawableHolder(createDrawable(R.drawable.unlock_halo));
+        mUnlockHalo = new DrawableHolder(createDrawable(R.drawable.waveview_unlock_halo));
         mUnlockHalo.setX(mLockCenterX);
         mUnlockHalo.setY(mLockCenterY);
         mUnlockHalo.setScaleX(0.1f);
@@ -187,7 +187,7 @@ public class WaveView extends View implements ValueAnimator.AnimatorUpdateListen
         mUnlockHalo.setAlpha(0.0f);
         mDrawables.add(mUnlockHalo);
 
-        BitmapDrawable wave = createDrawable(R.drawable.unlock_wave);
+        BitmapDrawable wave = createDrawable(R.drawable.waveview_unlock_wave);
         for (int i = 0; i < mWaveCount; i++) {
             DrawableHolder holder = new DrawableHolder(wave);
             mLightWaves.add(holder);

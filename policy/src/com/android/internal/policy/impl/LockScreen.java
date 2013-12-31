@@ -23,12 +23,14 @@ import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
+import android.graphics.drawable.Drawable;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -44,11 +46,13 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.util.Slog;
+import android.util.TypedValue;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.provider.Settings;
 import android.widget.*;
 import android.widget.ImageView.ScaleType;
 
@@ -57,9 +61,13 @@ import com.android.internal.policy.impl.KeyguardUpdateMonitor.InfoCallbackImpl;
 import com.android.internal.policy.impl.KeyguardUpdateMonitor.SimStateCallback;
 import com.android.internal.telephony.IccCard.State;
 import com.android.internal.widget.LockPatternUtils;
+import com.android.internal.widget.RotarySelector;
 import com.android.internal.widget.SlidingTab;
 import com.android.internal.widget.WaveView;
+import com.android.internal.widget.AcerView;
+import com.android.internal.widget.SenseView;
 import com.android.internal.widget.multiwaveview.GlowPadView;
+import com.android.internal.widget.multiwaveview.MultiWaveView;
 import com.android.internal.widget.multiwaveview.TargetDrawable;
 
 import java.io.File;
@@ -99,7 +107,35 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
 
     private KeyguardStatusViewManager mStatusViewManager;
     private UnlockWidgetCommonMethods mUnlockWidgetMethods;
+ 
     private View mUnlockWidget;
+    private GlowPadView mGlowPadSelector;
+    private WaveView mWaveViewSelector;
+    private AcerView mAcerViewSelector;
+    private SenseView mSenseViewSelector;
+    private MultiWaveView mMultiWaveSelector;
+    private SlidingTab mSlidingTabSelector;
+    private RotarySelector mRotarySelector;
+    // Get the style from settings
+    private int mLockscreenStyle = Settings.System.getInt(mContext.getContentResolver(),
+            Settings.System.LOCKSCREEN_STYLE, LOCK_STYLE_JB);
+    
+    private static final int LOCK_STYLE_JB = 0;    
+    private static final int LOCK_STYLE_ICS = 1;
+    private static final int LOCK_STYLE_GB = 2;
+    private static final int LOCK_STYLE_ECLAIR = 3;
+    private static final int LOCK_STYLE_ACER = 4;
+    private static final int LOCK_STYLE_HONEY = 5;
+    private static final int LOCK_STYLE_SENSE = 6;
+    
+    private boolean mUseJbLockscreen = (mLockscreenStyle == LOCK_STYLE_JB);
+    private boolean mUseIcsLockscreen = (mLockscreenStyle == LOCK_STYLE_ICS);
+    private boolean mUseGbLockscreen = (mLockscreenStyle == LOCK_STYLE_GB);
+    private boolean mUseEclairLockscreen = (mLockscreenStyle == LOCK_STYLE_ECLAIR);
+    private boolean mUseAcerLockscreen = (mLockscreenStyle == LOCK_STYLE_ACER);
+    private boolean mUseHoneyLockscreen = (mLockscreenStyle == LOCK_STYLE_HONEY);
+    private boolean mUseSenseLockscreen = (mLockscreenStyle == LOCK_STYLE_SENSE);
+
     private boolean mCameraDisabled;
     private boolean mSearchDisabled;
     // Is there a vibrator
@@ -153,7 +189,60 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
         public void cleanUp();
     }
 
-    class SlidingTabMethods implements SlidingTab.OnTriggerListener, UnlockWidgetCommonMethods {
+    class RotarySelMethods implements RotarySelector.OnDialTriggerListener,
+            UnlockWidgetCommonMethods {
+        private final RotarySelector mRotarySel;
+        
+        RotarySelMethods(RotarySelector rotarySel) {
+            mRotarySel = rotarySel;
+        }
+        
+        /** {@inheritDoc} */
+        public void onDialTrigger(View v, int whichHandle) {
+            if (whichHandle == RotarySelector.OnDialTriggerListener.LEFT_HANDLE) {
+                mCallback.goToUnlockScreen();
+            } else if (whichHandle == RotarySelector.OnDialTriggerListener.RIGHT_HANDLE) {
+                toggleRingMode();
+                updateResources();
+                mCallback.pokeWakelock();
+            }
+        }
+        
+        public void onGrabbedStateChange(View v, int grabbedState) { }
+        
+        public View getView() {
+            return mRotarySel;
+        }
+        
+        public void updateResources() {
+            boolean vibe = mSilentMode
+                && (mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_VIBRATE);
+        
+            int iconId = mSilentMode ? (vibe ? R.drawable.ic_jog_dial_vibrate_on
+                    : R.drawable.ic_jog_dial_sound_off) : R.drawable.ic_jog_dial_sound_on;
+        
+            mRotarySel.setRightHandleResource(iconId);
+        }
+        
+        public void reset(boolean animate) { }
+        
+        public void ping() { }
+
+        public void setEnabled(int resourceId, boolean enabled) {
+            // Not used
+        }
+
+        public int getTargetPosition(int resourceId) {
+            return -1; // Not supported
+        }
+
+        public void cleanUp() {
+            mRotarySel.setOnDialTriggerListener(null);
+        }
+        
+    }
+    
+   class SlidingTabMethods implements SlidingTab.OnTriggerListener, UnlockWidgetCommonMethods {
         private final SlidingTab mSlidingTab;
 
         SlidingTabMethods(SlidingTab slidingTab) {
@@ -182,6 +271,7 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
                 mCallback.goToUnlockScreen();
             } else if (whichHandle == SlidingTab.OnTriggerListener.RIGHT_HANDLE) {
                 toggleRingMode();
+                updateResources();
                 mCallback.pokeWakelock();
             }
         }
@@ -222,6 +312,98 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
 
         public void cleanUp() {
             mSlidingTab.setOnTriggerListener(null);
+        }
+    }
+
+    class AcerViewMethods implements AcerView.OnTriggerListener, UnlockWidgetCommonMethods {
+
+        private final AcerView mAcerView;
+
+        AcerViewMethods(AcerView acerView) {
+            mAcerView = acerView;
+        }
+        /** {@inheritDoc} */
+        public void onTrigger(View v, int whichHandle) {
+            if (whichHandle == AcerView.OnTriggerListener.CENTER_HANDLE) {
+                requestUnlockScreen();
+            }
+        }
+
+        /** {@inheritDoc} */
+        public void onGrabbedStateChange(View v, int grabbedState) {
+            // Don't poke the wake lock when returning to a state where the handle is
+            // not grabbed since that can happen when the system (instead of the user)
+            // cancels the grab.
+            if (grabbedState == AcerView.OnTriggerListener.CENTER_HANDLE) {
+                mCallback.pokeWakelock(STAY_ON_WHILE_GRABBED_TIMEOUT);
+            }
+        }
+
+        public void updateResources() {
+        }
+
+        public View getView() {
+            return mAcerView;
+        }
+        public void reset(boolean animate) {
+            mAcerView.reset();
+        }
+        public void ping() {
+        }
+        public void setEnabled(int resourceId, boolean enabled) {
+            // Not used
+        }
+        public int getTargetPosition(int resourceId) {
+            return -1; // Not supported
+        }
+        public void cleanUp() {
+            mAcerView.setOnTriggerListener(null);
+        }
+    }
+
+    class SenseViewMethods implements SenseView.OnTriggerListener, UnlockWidgetCommonMethods {
+
+        private final SenseView mSenseView;
+
+        SenseViewMethods(SenseView senseView) {
+            mSenseView = senseView;
+        }
+        /** {@inheritDoc} */
+        public void onTrigger(View v, int whichHandle) {
+            if (whichHandle == SenseView.OnTriggerListener.CENTER_HANDLE) {
+                requestUnlockScreen();
+            }
+        }
+
+        /** {@inheritDoc} */
+        public void onGrabbedStateChange(View v, int grabbedState) {
+            // Don't poke the wake lock when returning to a state where the handle is
+            // not grabbed since that can happen when the system (instead of the user)
+            // cancels the grab.
+            if (grabbedState == SenseView.OnTriggerListener.CENTER_HANDLE) {
+                mCallback.pokeWakelock(STAY_ON_WHILE_GRABBED_TIMEOUT);
+            }
+        }
+
+        public void updateResources() {
+        }
+
+        public View getView() {
+            return mSenseView;
+        }
+        public void reset(boolean animate) {
+            mSenseView.reset();
+        }
+        public void ping() {
+        }
+        public void setEnabled(int resourceId, boolean enabled) {
+            // Not used
+        }
+        public int getTargetPosition(int resourceId) {
+            return -1; // Not supported
+        }
+        public void cleanUp() {
+            mSenseView.setOnTriggerListener(null);
         }
     }
 
@@ -269,6 +451,102 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
         public void cleanUp() {
             mWaveView.setOnTriggerListener(null);
         }
+    }
+
+    class MultiWaveViewMethods implements MultiWaveView.OnTriggerListener,
+            UnlockWidgetCommonMethods {
+
+        private final MultiWaveView mMultiWaveView;
+        private boolean mCameraDisabled;
+        
+        MultiWaveViewMethods(MultiWaveView multiWaveView) {
+            mMultiWaveView = multiWaveView;
+            final boolean cameraDisabled = mLockPatternUtils.getDevicePolicyManager()
+                    .getCameraDisabled(null);
+            if (cameraDisabled) {
+                Log.v(TAG, "Camera disabled by Device Policy");
+                mCameraDisabled = true;
+            } else {
+                // Camera is enabled if resource is initially defined for MultiWaveView
+                // in the lockscreen layout file
+                mCameraDisabled = mMultiWaveView.getTargetResourceId()
+                        != R.array.lockscreen_targets_with_camera;
+            }
+        }
+        
+        public void updateResources() {
+            int resId;
+            if (mCameraDisabled) {
+                // Fall back to showing ring/silence if camera is disabled by DPM...
+                resId = mSilentMode ? R.array.lockscreen_targets_when_silent
+                    : R.array.lockscreen_targets_when_soundon;
+            } else {
+                resId = R.array.lockscreen_targets_with_camera;
+            }
+            mMultiWaveView.setTargetResources(resId);
+        }
+        
+        public void onGrabbed(View v, int handle) {
+        
+        }
+        
+        public void onReleased(View v, int handle) {
+        
+        }
+        
+        public void onTrigger(View v, int target) {
+            if (target == 0 || target == 1) { // 0 = unlock/portrait, 1 = unlock/landscape
+                mCallback.goToUnlockScreen();
+            } else if (target == 2 || target == 3) { // 2 = alt/portrait, 3 = alt/landscape
+                if (!mCameraDisabled) {
+                    // Start the Camera
+                    Intent intent = new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    mContext.startActivity(intent);
+                    mCallback.goToUnlockScreen();
+                } else {
+                    toggleRingMode();
+                    mUnlockWidgetMethods.updateResources();
+                    mCallback.pokeWakelock();
+                }
+            }
+        }
+        
+        public void onGrabbedStateChange(View v, int handle) {
+            // Don't poke the wake lock when returning to a state where the handle is
+            // not grabbed since that can happen when the system (instead of the user)
+            // cancels the grab.
+            if (handle != MultiWaveView.OnTriggerListener.NO_HANDLE) {
+                mCallback.pokeWakelock();
+            }
+        }
+        
+        public View getView() {
+            return mMultiWaveView;
+        }
+        
+        public void reset(boolean animate) {
+            mMultiWaveView.reset(animate);
+        }
+        
+        public void ping() {
+            mMultiWaveView.ping();
+        }
+
+        @Override
+        public void setEnabled(int resourceId, boolean enabled) {
+            mMultiWaveView.setEnableTarget(resourceId, enabled);
+        }
+        @Override
+        public int getTargetPosition(int resourceId) { 
+            return mMultiWaveView.getTargetPosition(resourceId);
+        }
+        @Override
+        public void cleanUp() {
+            mMultiWaveView.setOnTriggerListener(null);
+        }
+        @Override
+        public void onFinishFinalAnimation() { }
     }
 
     class GlowPadViewMethods implements GlowPadView.OnTriggerListener,
@@ -617,10 +895,66 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
 
         final LayoutInflater inflater = LayoutInflater.from(context);
         if (DBG) Log.v(TAG, "Creation orientation = " + mCreationOrientation);
-        if (mCreationOrientation != Configuration.ORIENTATION_LANDSCAPE) {
-            inflater.inflate(R.layout.keyguard_screen_tab_unlock, this, true);
-        } else {
-            inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this, true);
+
+        boolean landscape = mCreationOrientation == Configuration.ORIENTATION_LANDSCAPE;
+
+        switch (mLockscreenStyle) {
+            case LOCK_STYLE_JB:
+                if (landscape)
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this,
+                                    true);
+                else
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock, this,
+                                    true);
+                break;
+            case LOCK_STYLE_ICS:
+                if (landscape)
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this,
+                                    true);
+                else
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock, this,
+                                    true);
+                break;
+            case LOCK_STYLE_GB:
+                if (landscape)
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this,
+                                    true);
+                else
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock, this,
+                                    true);
+                break;
+            case LOCK_STYLE_ECLAIR:
+                if (landscape)
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this,
+                                    true);
+                else
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock, this,
+                                    true);
+                break;
+            case LOCK_STYLE_ACER:
+                if (landscape)
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this,
+                                    true);
+                else
+                    inflater.inflate(R.layout.keyguard_screen_tab_wavers_unlock, this,
+                                    true);
+                break;
+            case LOCK_STYLE_HONEY:
+                if (landscape)
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this,
+                                    true);
+                else
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock, this,
+                                    true);
+                break;
+            case LOCK_STYLE_SENSE:
+                if (landscape)
+                    inflater.inflate(R.layout.keyguard_screen_tab_unlock_land, this,
+                                    true);
+                else
+                    inflater.inflate(R.layout.keyguard_screen_tab_wavers_unlock, this,
+                                    true);
+                break;
         }
 
         setBackground(mContext, (ViewGroup) findViewById(R.id.root));
@@ -636,7 +970,79 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
         mHasVibrator = vibrator == null ? false : vibrator.hasVibrator();
         mAudioManager = (AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE);
         mSilentMode = isSilentMode();
-        mUnlockWidget = findViewById(R.id.unlock_widget);
+        mGlowPadSelector = (GlowPadView) findViewById(R.id.unlock_widget);
+        mMultiWaveSelector = (MultiWaveView) findViewById(R.id.multiwave_widget);
+        mAcerViewSelector = (AcerView) findViewById(R.id.acer_widget);
+        mSenseViewSelector = (SenseView) findViewById(R.id.sense_widget);
+        mWaveViewSelector = (WaveView) findViewById(R.id.waveview_widget);
+        mSlidingTabSelector = (SlidingTab) findViewById(R.id.tab_widget);
+        mRotarySelector = (RotarySelector) findViewById(R.id.rotary_widget);
+
+        if (mUseJbLockscreen) {
+            mGlowPadSelector.setVisibility(View.VISIBLE);
+            mAcerViewSelector.setVisibility(View.GONE);
+            mSenseViewSelector.setVisibility(View.GONE);
+            mWaveViewSelector.setVisibility(View.GONE);
+            mMultiWaveSelector.setVisibility(View.GONE);
+            mSlidingTabSelector.setVisibility(View.GONE);
+            mRotarySelector.setVisibility(View.GONE);
+            mUnlockWidget = mGlowPadSelector;
+        } else if (mUseIcsLockscreen) {
+            mMultiWaveSelector.setVisibility(View.VISIBLE);
+            mAcerViewSelector.setVisibility(View.GONE);
+            mSenseViewSelector.setVisibility(View.GONE);
+            mWaveViewSelector.setVisibility(View.GONE);
+            mGlowPadSelector.setVisibility(View.GONE);
+            mSlidingTabSelector.setVisibility(View.GONE);
+            mRotarySelector.setVisibility(View.GONE);
+            mUnlockWidget = mMultiWaveSelector;
+        } else if (mUseGbLockscreen) {
+            mMultiWaveSelector.setVisibility(View.GONE);
+            mAcerViewSelector.setVisibility(View.GONE);
+            mSenseViewSelector.setVisibility(View.GONE);
+            mWaveViewSelector.setVisibility(View.GONE);
+            mGlowPadSelector.setVisibility(View.GONE);
+            mSlidingTabSelector.setVisibility(View.VISIBLE);
+            mRotarySelector.setVisibility(View.GONE);
+            mUnlockWidget = mSlidingTabSelector;
+        } else if (mUseEclairLockscreen) {
+            mMultiWaveSelector.setVisibility(View.GONE);
+            mAcerViewSelector.setVisibility(View.GONE);
+            mSenseViewSelector.setVisibility(View.GONE);
+            mWaveViewSelector.setVisibility(View.GONE);
+            mGlowPadSelector.setVisibility(View.GONE);
+            mSlidingTabSelector.setVisibility(View.GONE);
+            mRotarySelector.setVisibility(View.VISIBLE);
+            mUnlockWidget = mRotarySelector;
+        } else if (mUseAcerLockscreen) {
+            mMultiWaveSelector.setVisibility(View.GONE);
+            mAcerViewSelector.setVisibility(View.VISIBLE);
+            mSenseViewSelector.setVisibility(View.GONE);
+            mWaveViewSelector.setVisibility(View.GONE);
+            mGlowPadSelector.setVisibility(View.GONE);
+            mSlidingTabSelector.setVisibility(View.GONE);
+            mRotarySelector.setVisibility(View.GONE);
+            mUnlockWidget = mAcerViewSelector;
+        } else if (mUseHoneyLockscreen) {
+            mMultiWaveSelector.setVisibility(View.GONE);
+            mAcerViewSelector.setVisibility(View.GONE);
+            mSenseViewSelector.setVisibility(View.GONE);
+            mWaveViewSelector.setVisibility(View.VISIBLE);
+            mGlowPadSelector.setVisibility(View.GONE);
+            mSlidingTabSelector.setVisibility(View.GONE);
+            mRotarySelector.setVisibility(View.GONE);
+            mUnlockWidget = mWaveViewSelector;
+        } else if (mUseSenseLockscreen) {
+            mMultiWaveSelector.setVisibility(View.GONE);
+            mAcerViewSelector.setVisibility(View.GONE);
+            mSenseViewSelector.setVisibility(View.VISIBLE);
+            mWaveViewSelector.setVisibility(View.GONE);
+            mGlowPadSelector.setVisibility(View.GONE);
+            mSlidingTabSelector.setVisibility(View.GONE);
+            mRotarySelector.setVisibility(View.GONE);
+            mUnlockWidget = mSenseViewSelector;
+        }
+
         mUnlockWidgetMethods = createUnlockMethods(mUnlockWidget);
 
         if (DBG) Log.v(TAG, "*** LockScreen accel is "
@@ -644,7 +1050,13 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
     }
 
     private UnlockWidgetCommonMethods createUnlockMethods(View unlockWidget) {
-        if (unlockWidget instanceof SlidingTab) {
+        if (unlockWidget instanceof RotarySelector) {
+            RotarySelector rotarySelView = (RotarySelector) mUnlockWidget;
+            rotarySelView.setLeftHandleResource(R.drawable.ic_jog_dial_unlock);
+            RotarySelMethods rotarySelMethods = new RotarySelMethods(rotarySelView);
+            rotarySelView.setOnDialTriggerListener(rotarySelMethods);
+            return rotarySelMethods;
+         } else if (unlockWidget instanceof SlidingTab) {
             SlidingTab slidingTabView = (SlidingTab) unlockWidget;
             slidingTabView.setHoldAfterTrigger(true, false);
             slidingTabView.setLeftHintText(R.string.lockscreen_unlock_label);
@@ -656,11 +1068,26 @@ class LockScreen extends LinearLayout implements KeyguardScreen {
             SlidingTabMethods slidingTabMethods = new SlidingTabMethods(slidingTabView);
             slidingTabView.setOnTriggerListener(slidingTabMethods);
             return slidingTabMethods;
+        } else if (unlockWidget instanceof AcerView) {
+            AcerView acerView = (AcerView) unlockWidget;
+            AcerViewMethods acerViewMethods = new AcerViewMethods(acerView);
+            acerView.setOnTriggerListener(acerViewMethods);
+            return acerViewMethods;
+        } else if (unlockWidget instanceof SenseView) {
+            SenseView senseView = (SenseView) unlockWidget;
+            SenseViewMethods senseViewMethods = new SenseViewMethods(senseView);
+            senseView.setOnTriggerListener(senseViewMethods);
+            return senseViewMethods;
         } else if (unlockWidget instanceof WaveView) {
             WaveView waveView = (WaveView) unlockWidget;
             WaveViewMethods waveViewMethods = new WaveViewMethods(waveView);
             waveView.setOnTriggerListener(waveViewMethods);
             return waveViewMethods;
+        } else if (unlockWidget instanceof MultiWaveView) {
+            MultiWaveView multiWaveView = (MultiWaveView) mUnlockWidget;
+            MultiWaveViewMethods multiWaveViewMethods = new MultiWaveViewMethods(multiWaveView);
+            multiWaveView.setOnTriggerListener(multiWaveViewMethods);
+            return multiWaveViewMethods;
         } else if (unlockWidget instanceof GlowPadView) {
             GlowPadView glowPadView = (GlowPadView) unlockWidget;
             GlowPadViewMethods glowPadViewMethods = new GlowPadViewMethods(glowPadView);

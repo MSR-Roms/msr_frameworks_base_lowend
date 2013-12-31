@@ -2407,6 +2407,17 @@ public class View implements Drawable.Callback, Drawable.Callback2, KeyEvent.Cal
     public static final int STATUS_BAR_HIDDEN = SYSTEM_UI_FLAG_LOW_PROFILE;
 
     /**
+     * @hide
+     *
+     * NOTE: This flag may only be used in subtreeSystemUiVisibility. It is masked
+     * out of the public fields to keep the undefined bits out of the developer's way.
+     *
+     * Flag to disable the global search gesture. Don't use this
+     * unless you're a special part of the system UI (i.e., setup wizard, keyguard).
+     */
+    public static final int STATUS_BAR_DISABLE_SEARCH = 0x02000000;
+
+    /**
      * @deprecated Use {@link #SYSTEM_UI_FLAG_VISIBLE} instead.
      */
     public static final int STATUS_BAR_VISIBLE = SYSTEM_UI_FLAG_VISIBLE;
@@ -2508,17 +2519,6 @@ public class View implements Drawable.Callback, Drawable.Callback2, KeyEvent.Cal
      * unless you're a special part of the system UI (i.e., setup wizard, keyguard).
      */
     public static final int STATUS_BAR_DISABLE_RECENT = 0x01000000;
-
-    /**
-     * @hide
-     *
-     * NOTE: This flag may only be used in subtreeSystemUiVisibility. It is masked
-     * out of the public fields to keep the undefined bits out of the developer's way.
-     *
-     * Flag to disable the global search gesture. Don't use this
-     * unless you're a special part of the system UI (i.e., setup wizard, keyguard).
-     */
-    public static final int STATUS_BAR_DISABLE_SEARCH = 0x02000000;
 
     /**
      * @hide

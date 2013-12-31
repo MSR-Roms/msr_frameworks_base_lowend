@@ -256,8 +256,7 @@ public class PowerManagerService extends IPowerManager.Stub
     private ScreenBrightnessAnimator mScreenBrightnessAnimator;
     private boolean mWaitingForFirstLightSensor = false;
     private boolean mStillNeedSleepNotification;
-    private boolean mIsPlugged = false;
-    private boolean mIsCharging = false;
+    private boolean mIsPowered = false;
     private IActivityManager mActivityService;
     private IBatteryStats mBatteryStats;
     private BatteryService mBatteryService;
@@ -455,12 +454,10 @@ public class PowerManagerService extends IPowerManager.Stub
         @Override
         public void onReceive(Context context, Intent intent) {
             synchronized (mLocks) {
-                boolean wasPlugged = mIsPlugged;
-                boolean wasCharging = mIsCharging;
-                mIsPlugged = mBatteryService.isPlugged();
-                mIsCharging = mBatteryService.isCharging();
+                boolean wasPowered = mIsPowered;
+                mIsPowered = mBatteryService.isPowered();
 
-                if (mIsPlugged != wasPlugged) {
+                if (mIsPowered != wasPowered) {
                     // update mStayOnWhilePluggedIn wake lock
                     updateWakeLockLocked();
 
@@ -475,7 +472,7 @@ public class PowerManagerService extends IPowerManager.Stub
                     // turn on.  Some devices want this because they don't have a
                     // charging LED.
                     synchronized (mLocks) {
-                        if (!wasPlugged || (mPowerState & SCREEN_ON_BIT) != 0 ||
+                        if (!wasPowered || (mPowerState & SCREEN_ON_BIT) != 0 ||
                                 mUnplugTurnsOnScreen) {
                             forceUserActivityLocked();
                         }
@@ -819,7 +816,7 @@ public class PowerManagerService extends IPowerManager.Stub
 
     private void updateWakeLockLocked() {
         final int stayOnConditions = getStayOnConditionsLocked();
-        if (stayOnConditions != 0 && mBatteryService.isPlugged(stayOnConditions)) {
+        if (stayOnConditions != 0 && mBatteryService.isPowered(stayOnConditions)) {
             // keep the device on if we're plugged in and mStayOnWhilePluggedIn is set.
             mStayOnWhilePluggedInScreenDimLock.acquire();
             mStayOnWhilePluggedInPartialLock.acquire();
@@ -1245,8 +1242,7 @@ public class PowerManagerService extends IPowerManager.Stub
 
         synchronized (mLocks) {
             pw.println("Power Manager State:");
-            pw.println("  mIsPlugged=" + mIsPlugged
-                    + " mIsCharging=" + mIsCharging
+            pw.println("  mIsPowered=" + mIsPowered
                     + " mPowerState=" + mPowerState
                     + " mScreenOffTime=" + (SystemClock.elapsedRealtime()-mScreenOffTime)
                     + " ms");
@@ -2060,7 +2056,7 @@ public class PowerManagerService extends IPowerManager.Stub
     }
 
     private boolean batteryIsLow() {
-        return (!mIsCharging &&
+        return (!mIsPowered &&
                 mBatteryService.getBatteryLevel() <= LOW_BATTERY_THRESHOLD);
     }
 
@@ -2187,7 +2183,7 @@ public class PowerManagerService extends IPowerManager.Stub
                         steps = (int)(ANIM_STEPS*ratio);
                     }
                     final int stayOnConditions = getStayOnConditionsLocked();
-                    if (stayOnConditions != 0 && mBatteryService.isPlugged(stayOnConditions)) {
+                    if (stayOnConditions != 0 && mBatteryService.isPowered(stayOnConditions)) {
                         // If the "stay on while plugged in" option is
                         // turned on, then the screen will often not
                         // automatically turn off while plugged in.  To
@@ -2398,6 +2394,14 @@ public class PowerManagerService extends IPowerManager.Stub
                     Message msg = mScreenBrightnessHandler
                             .obtainMessage(ANIMATE_LIGHTS, mask, newValue);
                     mScreenBrightnessHandler.sendMessageDelayed(msg, delay);
+                } else {
+                    final boolean doScreenAnimation = (mask & (SCREEN_BRIGHT_BIT | SCREEN_ON_BIT)) != 0;
+                    final boolean turnOff = currentValue == PowerManager.BRIGHTNESS_OFF;
+                    if (turnOff && doScreenAnimation) {
+                        // Cancel all pending animations since we're turning off
+                        mScreenBrightnessHandler.removeCallbacksAndMessages(null);
+                        screenOffFinishedAnimatingLocked(mScreenOffReason);
+                    }
                 }
             }
         }
@@ -2461,9 +2465,6 @@ public class PowerManagerService extends IPowerManager.Stub
                     final boolean doScreenAnim = (mask & (SCREEN_BRIGHT_BIT | SCREEN_ON_BIT)) != 0;
                     final boolean turningOff = endValue == PowerManager.BRIGHTNESS_OFF;
                     if (turningOff && doScreenAnim) {
-                        // Cancel all pending animations since we're turning off
-                        mScreenBrightnessHandler.removeCallbacksAndMessages(null);
-                        screenOffFinishedAnimatingLocked(mScreenOffReason);
                         duration = 200; // TODO: how long should this be?
                     }
                     if (doScreenAnim) {
